@@ -10,7 +10,7 @@ class RoleTest extends \PHPUnit_Framework_TestCase
 		$role = new Role("my-role");
 		
 		$this->assertFalse($role->isAllowed("my-resource", "read"));
-		$this->assertEquals("my-role", $role->getName());
+		$this->assertEquals("my-role", $role->name());
 	}
 	
 	public function testRolePermissions()

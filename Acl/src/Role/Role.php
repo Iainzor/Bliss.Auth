@@ -1,16 +1,14 @@
 <?php
 namespace Acl\Role;
 
-class Role extends \Acl\Acl
+use Acl\Acl;
+
+class Role extends Acl implements RoleInterface
 {
-	const RESOURCE_NAME = "acl-role";
-	
 	/**
 	 * @var string
 	 */
 	protected $name;
-	
-	public function resourceName() { return self::RESOURCE_NAME; }
 	
 	/**
 	 * Constructor
@@ -23,22 +21,15 @@ class Role extends \Acl\Acl
 	}
 	
 	/**
-	 * Set the name of the role
+	 * Get or set the name of the role
 	 * 
 	 * @param string $name
 	 */
-	public function setName($name)
+	public function name($name = null)
 	{
-		$this->name = $name;
-	}
-	
-	/**
-	 * Get the name of the role
-	 * 
-	 * @return string
-	 */
-	public function getName()
-	{
+		if ($name !== null) {
+			$this->name = $name;
+		}
 		return $this->name;
 	}
 }

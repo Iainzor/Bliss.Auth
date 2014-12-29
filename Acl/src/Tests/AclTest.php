@@ -14,22 +14,31 @@ class AclTest extends \PHPUnit_Framework_TestCase
 		$this->assertFalse($acl->isAllowed(self::RESOURCE_NAME));
 	}
 	
+	public function testAllowAll()
+	{
+		$acl = new Acl();
+		$acl->allowByDefault(true);
+		
+		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME));
+		$this->assertTrue($acl->isAllowed("SomethingElse"));
+	}
+	
 	public function testReadResource()
 	{
 		$acl = new Acl();
-		$acl->allow(self::RESOURCE_NAME, "read", 1);
+		$acl->allow(self::RESOURCE_NAME, "read", ["id" => 1]);
 		
-		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", 1));
-		$this->assertFalse($acl->isAllowed(self::RESOURCE_NAME, "read", 2));
+		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", ["id" => 1]));
+		$this->assertFalse($acl->isAllowed(self::RESOURCE_NAME, "read", ["id" => 2]));
 	}
 	
 	public function testReadAllOfResource()
 	{
 		$acl = new Acl();
-		$acl->allow(self::RESOURCE_NAME, "read", null);
+		$acl->allow(self::RESOURCE_NAME, "read");
 		
-		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", 1));
-		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", 2));
+		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", ["id" => 1]));
+		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", ["id" => 2]));
 	}
 	
 	public function testAllowEverythingOnResource()
@@ -37,7 +46,7 @@ class AclTest extends \PHPUnit_Framework_TestCase
 		$acl = new Acl();
 		$acl->allow(self::RESOURCE_NAME);
 		
-		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", 1));
+		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", ["id" => 1]));
 		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "create"));
 	}
 	
@@ -55,12 +64,12 @@ class AclTest extends \PHPUnit_Framework_TestCase
 	{
 		$acl = new Acl();
 		$acl->allow(self::RESOURCE_NAME);
-		$acl->deny(self::RESOURCE_NAME, null, 1);
-		$acl->allow(self::RESOURCE_NAME, "read", 2);
+		$acl->deny(self::RESOURCE_NAME, null, ["id" => 1]);
+		$acl->allow(self::RESOURCE_NAME, "read", ["id" => 2]);
 		$acl->allow("blah");
 		
-		$this->assertFalse($acl->isAllowed(self::RESOURCE_NAME, "read", 1));
-		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", 2));
+		$this->assertFalse($acl->isAllowed(self::RESOURCE_NAME, "read", ["id" => 1]));
+		$this->assertTrue($acl->isAllowed(self::RESOURCE_NAME, "read", ["id" => 2]));
 	}
 	
 	public function testMerge()

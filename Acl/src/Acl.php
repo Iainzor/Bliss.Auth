@@ -1,16 +1,37 @@
 <?php
 namespace Acl;
 
-class Acl extends \Bliss\Resource
+class Acl extends Component implements AclInterface
 {
-	const RESOURCE_NAME = "acl";
+	const CREATE = "create";
+	const READ = "read";
+	const UPDATE = "update";
+	const DELETE = "delete";
+	
+	/**
+	 * @var boolean
+	 */
+	protected $allowByDefault = false;
 	
 	/**
 	 * @var \Acl\Permission\Permission[]
 	 */
-	private $permissions = [];
+	protected $permissions = [];
 	
-	public function resourceName() { return self::RESOURCE_NAME; }
+	/**
+	 * Get or set whether permissions are allowed by default for the ACL
+	 * This will only affect permissions that are not explicitly set
+	 * 
+	 * @param boolean $flag
+	 * @return boolean
+	 */
+	public function allowByDefault($flag = null) 
+	{
+		if ($flag !== null) {
+			$this->allowByDefault = (boolean) $flag;
+		}
+		return $this->allowByDefault;
+	}
 	
 	/**
 	 * Set a permission for a resource
@@ -21,15 +42,15 @@ class Acl extends \Bliss\Resource
 	 * 
 	 * @param string $resourceName
 	 * @param string $action
-	 * @param int $resourceId
+	 * @param array $params
 	 * @param boolean $isAllowed
 	 */
-	public function set($resourceName, $action = null, $resourceId = 0, $isAllowed = true)
+	public function set($resourceName, $action = null, array $params = [], $isAllowed = true)
 	{
 		$permission = Permission\Permission::factory([
 			"resourceName" => $resourceName,
-			"resourceId" => $resourceId,
 			"action" => $action,
+			"params" => $params,
 			"isAllowed" => (boolean) $isAllowed
 		]);
 		
@@ -42,11 +63,11 @@ class Acl extends \Bliss\Resource
 	 * 
 	 * @param string $resourceName
 	 * @param string $action
-	 * @param int $resourceId
+	 * @param array $params
 	 */
-	public function allow($resourceName, $action = null, $resourceId = 0)
+	public function allow($resourceName, $action = null, array $params = [])
 	{
-		$this->set($resourceName, $action, $resourceId, true);
+		$this->set($resourceName, $action, $params, true);
 	}
 	
 	/**
@@ -54,13 +75,13 @@ class Acl extends \Bliss\Resource
 	 * 
 	 * Short hand for set()
 	 * 
-	 * @param string $resouceName
+	 * @param string $resourceName
 	 * @param string $action
-	 * @param int $resourceId
+	 * @param array $params
 	 */
-	public function deny($resourceName, $action = null, $resourceId = 0)
+	public function deny($resourceName, $action = null, array $params = [])
 	{
-		$this->set($resourceName, $action, $resourceId, false);
+		$this->set($resourceName, $action, $params, false);
 	}
 	
 	/**
@@ -68,20 +89,24 @@ class Acl extends \Bliss\Resource
 	 * 
 	 * @param string $resourceName
 	 * @param string $action
-	 * @param int $resourceId
+	 * @param array $params
 	 * @return boolean
 	 */
-	public function isAllowed($resourceName, $action = null, $resourceId = 0)
+	public function isAllowed($resourceName, $action = null, array $params = [])
 	{
-		$allowed = false;
+		if (is_array($action)) {
+			$action = empty($action) ? null : array_shift($action);
+		}
+		
+		$allowed = $this->allowByDefault;
 		
 		if (isset($this->permissions[$resourceName])) {
 			$perms = array_filter($this->permissions[$resourceName], function(Permission\Permission $perm) use ($action) {
-				return $perm->getAction() === $action || $perm->getAction() === null;
+				return $perm->action() === $action || $perm->action() === null;
 			});
 			
 			foreach ($perms as $perm) {
-				if ($perm->getResourceId() === (int) $resourceId || !$perm->getResourceId()) {
+				if ($perm->matches($params)) {
 					if ($perm->isAllowed()) {
 						$allowed = true;
 					} else if ($allowed && !$perm->isAllowed()) {
@@ -92,6 +117,31 @@ class Acl extends \Bliss\Resource
 		}
 		
 		return $allowed;
+	}
+	
+	/**
+	 * Assert that a permission is allowed
+	 * 
+	 * @param string $resourceName
+	 * @param string $action
+	 * @param array $params
+	 * @throws PermissionDeniedException
+	 */
+	public function assertIsAllowed($resourceName, $action = null, array $params = []) 
+	{
+		if (!$this->isAllowed($resourceName, $action, $params)) {
+			if ($action !== null) {
+				$message = "Permission for action '{$action}' denied for resource: {$resourceName}";
+			} else {
+				$message = "Permission denied for resource: {$resourceName}";
+			}
+			
+			if (count($params)) {
+				$message .= ", using params: ". json_encode($params);
+			}
+			
+			throw new PermissionDeniedException($message);
+		}
 	}
 	
 	/**
@@ -115,7 +165,7 @@ class Acl extends \Bliss\Resource
 	 */
 	public function add(Permission\Permission $permission)
 	{
-		$i = $permission->getResourceName();
+		$i = $permission->resourceName();
 		if (!isset($this->permissions[$i])) {
 			$this->permissions[$i] = [];
 		}
@@ -126,9 +176,9 @@ class Acl extends \Bliss\Resource
 	/**
 	 * Merge another ACL with this one
 	 * 
-	 * @param \Acl\Acl $acl
+	 * @param \Acl\AclInterface $acl
 	 */
-	public function merge(Acl $acl)
+	public function merge(AclInterface $acl)
 	{
 		foreach ($acl->permissions() as $permission) {
 			$this->add($permission);
