@@ -1,23 +1,44 @@
 <?php
 namespace User\Session;
 
-use User\DbTable;
+use User\DbTable as UserDbTable,
+	User\User,
+	User\Hasher\HasherInterface,
+	User\Hasher\Blowfish;
 
 class Manager
 {
 	/**
-	 * @var DbTable
+	 * @var \User\Session\DbTable
 	 */
-	private $dbTable;
+	private $sessionDbTable;
+	
+	/**
+	 * @var \User\DbTable
+	 */
+	private $userDbTable;
+	
+	/**
+	 * @var HasherInterface
+	 */
+	private $hasher;
 	
 	/**
 	 * Constructor
 	 * 
-	 * @param DbTable $userDbTable
+	 * @param \User\Session\DbTable $sessionDbTable
+	 * @param \User\DbTable $userDbTable
+	 * @param HasherInterface
 	 */
-	public function __construct(DbTable $userDbTable)
+	public function __construct(DbTable $sessionDbTable, UserDbTable $userDbTable, HasherInterface $hasher = null)
 	{
-		$this->dbTable = $userDbTable;
+		if ($hasher === null) {
+			$hasher = new Blowfish();
+		}
+		
+		$this->sessionDbTable = $sessionDbTable;
+		$this->userDbTable = $userDbTable;
+		$this->hasher = $hasher;
 	}
 	
 	/**
@@ -44,16 +65,53 @@ class Manager
 	public function createSession($email, $password)
 	{
 		$session = new Session();
-		$user = $this->dbTable->find("`email`=:email", [
+		$userRow = $this->userDbTable->find("`email`=:email", [
 			":email" => $email
 		]);
 		
-		if (!empty($user)) {
-			if ($user["password"] === $password) {
+		if (!empty($userRow)) {
+			$user = User::populate(new User(), $userRow);
+			
+			if ($this->hasher->matches($password, $user->password())) {
+				$session->user($user);
 				$session->isValid(true);
 			}
 		}
 		
 		return $session;
+	}
+	
+	/**
+	 * Attempt to attach a user session instance
+	 * 
+	 * @param \User\Session\Session $session
+	 * @return \User\Session\Session
+	 */
+	public function attachUser(Session $session)
+	{
+		$row = $this->sessionDbTable->find("`id` = :id", [
+			":id" => $session->id()
+		]);
+		
+		if (!empty($row)) {
+			Session::populate($session, $row);
+			
+			$userRow = $this->userDbTable->find("`id` = :id", [
+				":id" => $session->userId()
+			]);
+			if ($userRow) {
+				$user = User::populate(new User(), $userRow);
+				$session->user($user);
+			}
+		}
+		
+		return $session;
+	}
+	
+	public function save(Session $session)
+	{
+		$session->save();
+		
+		$this->sessionDbTable->insert($session->toBasicArray());
 	}
 }

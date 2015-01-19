@@ -1,7 +1,8 @@
 <?php
 namespace User\Session;
 
-use Bliss\Component;
+use Bliss\Component,
+	User\User;
 
 class Session extends Component implements SessionInterface
 {
@@ -15,16 +16,33 @@ class Session extends Component implements SessionInterface
 	protected $id;
 	
 	/**
+	 * @var int
+	 */
+	protected $userId;
+	
+	/**
 	 * @var boolean
 	 */
 	protected $isValid = false;
 	
 	/**
-	 * Constructor
+	 * @var int
 	 */
-	public function __construct() 
+	protected $created;
+	
+	/**
+	 * @var \User\User
+	 */
+	protected $user;
+	
+	/**
+	 * Set the key used when saving the session
+	 * 
+	 * @param string $key
+	 */
+	public function setKey($key)
 	{
-		$this->id = md5(uniqid(self::KEY));
+		$this->key = $key;
 	}
 	
 	/**
@@ -38,7 +56,41 @@ class Session extends Component implements SessionInterface
 		if ($id !== null) {
 			$this->id = $id;
 		}
+		
+		if (!isset($this->id)) {
+			$this->id = md5(uniqid($this->key));
+		}
+		
 		return $this->id;
+	}
+	
+	/**
+	 * Get or set the ID of the user the session belongs to
+	 * 
+	 * @param int $userId
+	 * @return int
+	 */
+	public function userId($userId = null)
+	{
+		if ($userId !== null) {
+			$this->userId = (int) $userId;
+		}
+		return $this->userId;
+	}
+	
+	/**
+	 * Get or set the user instance 
+	 * 
+	 * @param \User\User $user
+	 * @return \User\User
+	 */
+	public function user(User $user = null)
+	{
+		if ($user !== null) {
+			$this->user = $user;
+			$this->userId($user->id());
+		}
+		return $this->user;
 	}
 	
 	/**
@@ -56,13 +108,30 @@ class Session extends Component implements SessionInterface
 	}
 	
 	/**
+	 * Get or set the UNIX timestamp of when the session was created
+	 * 
+	 * @param int $created
+	 * @return int
+	 */
+	public function created($created = null)
+	{
+		if ($created !== null) {
+			$this->created = (int) $created;
+		}
+		if (!isset($this->created)) {
+			$this->created = time();
+		}
+		return $this->created;
+	}
+	
+	/**
 	 * Attempt to load the session
 	 */
 	public function load()
 	{
-		if (isset($_SESSION[self::KEY])) {
+		if (isset($_SESSION[$this->key])) {
 			$this->isValid(true);
-			$this->id($_SESSION[self::KEY]);
+			$this->id($_SESSION[$this->key]);
 		}
 	}
 	
@@ -71,7 +140,7 @@ class Session extends Component implements SessionInterface
 	 */
 	public function save() 
 	{
-		$_SESSION[self::KEY] = $this->id();
+		$_SESSION[$this->key] = $this->id();
 	}
 	
 	/**
@@ -79,6 +148,6 @@ class Session extends Component implements SessionInterface
 	 */
 	public function delete() 
 	{
-		unset($_SESSION[self::KEY]);
+		unset($_SESSION[$this->key]);
 	}
 }
