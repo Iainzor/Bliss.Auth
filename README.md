@@ -1,4 +1,4 @@
-Bliss.Auth
+Bliss.Security
 ==========
 
-Authentication modules for the Bliss Application Engine
+Security modules for the Bliss Application Engine
