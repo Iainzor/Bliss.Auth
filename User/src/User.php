@@ -28,6 +28,11 @@ class User extends ResourceComponent
 	protected $isActive = true;
 	
 	/**
+	 * @var \User\Hasher\HasherInterface
+	 */
+	private static $passwordHasher;
+	
+	/**
 	 * @return string
 	 */
 	public function getResourceName() { return self::RESOURCE_NAME; }
@@ -86,6 +91,24 @@ class User extends ResourceComponent
 			$this->isActive = (boolean) $flag;
 		}
 		return $this->isActive;
+	}
+	
+	/**
+	 * Get or set the global password hasher for users
+	 * 
+	 * @param \User\Hasher\HasherInterface $hasher
+	 * @return \User\Hasher\HasherInterface
+	 */
+	public static function passwordHasher(Hasher\HasherInterface $hasher = null)
+	{
+		if ($hasher !== null) {
+			self::$passwordHasher = $hasher;
+		}
+		if (!isset(self::$passwordHasher)) {
+			self::$passwordHasher = new Hasher\Blowfish();
+		}
+		
+		return self::$passwordHasher;
 	}
 			
 }

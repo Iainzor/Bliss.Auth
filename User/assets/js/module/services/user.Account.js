@@ -8,5 +8,9 @@ bliss.service("user.Account", ["$resource", "bliss.App", function($resource, App
 		return App.config().user;
 	};
 	
+	Account.clear = function() {
+		App.config().user = null;
+	};
+	
 	return Account;
 }]);

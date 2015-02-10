@@ -1,7 +1,10 @@
 <?php
 namespace User\Controller;
 
-use Bliss\Controller\AbstractController;
+use Bliss\Controller\AbstractController,
+	User\User,
+	User\DbTable as UserDbTable,
+	User\Form\SignUpForm;
 
 class AuthController extends AbstractController
 {
@@ -22,6 +25,37 @@ class AuthController extends AbstractController
 			$manager->save($session);
 			
 			return $session->toArray();
+		}
+	}
+	
+	public function signUpAction()
+	{
+		if ($this->request()->isPost()) {
+			$form = new SignUpForm(
+				new UserDbTable($this->database())
+			);
+			$user = $form->create($this->param("user", []));
+			
+			if ($user === false) {
+				return [
+					"result" => "error",
+					"errors" => $form->errors()
+				];
+			} else {
+				return $user->toArray();
+			}
+		}
+	}
+	
+	public function signOutAction() 
+	{
+		if ($this->request()->isPost()) {
+			$session = $this->module->session();
+			$session->delete();
+			
+			return [
+				"result" => "success"
+			];
 		}
 	}
 }

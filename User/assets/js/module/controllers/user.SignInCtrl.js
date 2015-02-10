@@ -1,7 +1,10 @@
-bliss.controller("user.SignInCtrl", ["$scope", "$location", "user.User", "user.Account", "unifiedUI.Layout", function($scope, $location, User, Account, Layout) {
+bliss.controller("user.SignInCtrl", ["$scope", "$location", "user.Account", "unifiedUI.Layout", "unifiedUI.Navigation", function($scope, $location, Account, Layout, Nav) {
 	Layout.shrink();
 	Layout.menu.disable();
-		
+	
+	console.log(Nav.page());
+	console.log(Nav.pages());
+	
 	$scope.user = {
 		email: null,
 		password: null

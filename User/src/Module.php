@@ -8,10 +8,13 @@ use Bliss\Module\AbstractModule,
 	UnifiedUI\Module as UI,
 	Config\PublicConfigInterface,
 	Config\Config,
-	Router\ProviderInterface as RouteProvider;
+	Router\ProviderInterface as RouteProvider,
+	Pages\ProviderInterface as PageProvider;
 
-class Module extends AbstractModule implements InjectorInterface, PublicConfigInterface, RouteProvider
+class Module extends AbstractModule implements InjectorInterface, PublicConfigInterface, RouteProvider, PageProvider
 {
+	const RESOURCE_NAME = "user-module";
+	
 	/**
 	 * @var \User\Session\SessionInterface
 	 */
@@ -52,7 +55,7 @@ class Module extends AbstractModule implements InjectorInterface, PublicConfigIn
 			$this->sessionManager = new Session\Manager(
 				new Session\DbTable($db),
 				new DbTable($db),
-				new Hasher\Blowfish()
+				User::passwordHasher()
 			);
 		}
 		return $this->sessionManager;
@@ -84,6 +87,30 @@ class Module extends AbstractModule implements InjectorInterface, PublicConfigIn
 	{
 		$accountWidget = new Partial($this->resolvePath("layouts/partials/user-menu-widget.html.phtml"));
 		$injectable->inject(UI::AREA_MENU, $accountWidget, -1);
+	}
+	
+	public function initPages(\Pages\Container $root) 
+	{
+		$pages = [
+			[
+				"title" => "Sign In",
+				"path" => "sign-in"
+			], [
+				"title" => "Create an Account",
+				"path" => "sign-up"
+			], [
+				"title" => "Account Recovery",
+				"path" => "account/recover"
+			]
+		];
+		
+		$root->add([
+			[
+				"id" => self::RESOURCE_NAME,
+				"visible" => false,
+				"pages" => $pages
+			]
+		]);
 	}
 	
 	public function populatePublicConfig(Config $config) 
